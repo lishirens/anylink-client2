@@ -6,25 +6,39 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # 强制使用 Node 24，彻底消除 Node 20 警告
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      AGENT_ARCH: x64
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js 22 LTS（Electron 最稳定版本）
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: 检查项目文件结构（关键！）
+        run: |
+          echo "=== 根目录文件 ==="
+          dir
+          echo "=== vpnagent 目录文件 ==="
+          dir vpnagent
+          echo "=== package.json 内容 ==="
+          type package.json
 
-      - name: Build Electron App
-        run: npm run build
-        env:
-          AGENT_ARCH: x64
+      - name: 安装依赖
+        run: npm install --verbose
 
-      - name: Upload EXE
+      - name: 执行构建（显示完整错误日志）
+        run: npm run build --verbose
+
+      - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
-          name: my-app-exe
+          name: anylink-client-windows
           path: build/
+          retention-days: 30
