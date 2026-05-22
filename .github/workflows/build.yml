@@ -1,73 +1,53 @@
-name: Build Anylink Client
+asar: true
+asarUnpack:
+  - bin/**
+extraFiles: []
+productName: Anylink Client
+appId: anylink-client
+directories:
+  output: build
+files:
+  - dist/electron/**/*
 
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
-  tags:
-    types: [created]
-
-jobs:
-  build:
-    name: Build ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - windows-latest
-          - macos-latest
-          - ubuntu-latest
-        agent_arch:
-          - x64
-
-    env:
-      AGENT_ARCH: ${{ matrix.agent_arch }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build Electron App
-        run: npm run build
-
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.os }}-build
-          path: build/
-          retention-days: 7
-
-  release:
-    name: Release
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-
-      - name: Release to GitHub
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          files: |
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/*.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+dmg:
+  contents:
+    - x: 410
+      y: 150
+      type: link
+      path: /Applications
+    - x: 130
+      y: 150
+      type: file
+mac:
+  icon: config/icons/icon.icns
+  target: dmg
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+  extraResources:
+    - from: vpnagent/anylink_client_agent-darwin-${env.AGENT_ARCH}
+      to: bin/anylink_client_agent
+      filter:
+        - "**/*"
+win:
+  icon: config/icons/icon.ico
+  target: nsis
+  artifactName: "${productName}-${version}-win-${arch}.${ext}"
+  extraResources:
+    - from: vpnagent/anylink_client_agent-windows-${env.AGENT_ARCH}.exe
+      to: bin/anylink_client_agent.exe
+      filter:
+        - "**/*"
+linux:
+  icon: config/icons/icon.png
+  target: [tar.gz]
+  artifactName: "${productName}-${version}-linux-${arch}.${ext}"
+  extraResources:
+    - from: vpnagent/anylink_client_agent-linux-${env.AGENT_ARCH}
+      to: bin/anylink_client_agent
+      filter:
+        - "**/*"
+nsis:
+  include: installer.nsi
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  license: LICENSE
